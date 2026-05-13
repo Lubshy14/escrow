@@ -1,36 +1,30 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import Logo from "../components/Logo";
 
 export default function Register() {
   const { language, setLanguage, t } = useLanguage();
+  const { register } = useAuth();
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const { data } = await axios.post("/api/auth/register", {
-        name: name.trim(),
-        username: username.trim(),
-        password: password.trim(),
-      });
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      axios.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
-      navigate("/dashboard");
+      await register(name, username, password, email);
+      navigate("/verify");
     } catch (err) {
-      setError(t.registerError);
+      setError(err.response?.data?.error || t.registerError);
     } finally {
       setLoading(false);
     }
@@ -39,12 +33,18 @@ export default function Register() {
   return (
     <div style={styles.page}>
       <div style={styles.box}>
-        <div style={styles.logoStrip}>
-          <Logo size={28} showText />
-        </div>
+        <header style={styles.headerBar}>
+          <div style={styles.brandRow}>
+            <Logo size={28} showText={false} />
+            <span style={styles.brandLabel}>Ticketswap</span>
+          </div>
+          <Link to="/login" style={styles.headerLink}>{t.signIn}</Link>
+        </header>
 
-        <h2 style={styles.title}>{t.signUp}</h2>
-        <p style={styles.sub}>{t.registerSubtitle}</p>
+        <div style={styles.bodyTop}>
+          <h2 style={styles.title}>{t.signUp}</h2>
+          <p style={styles.sub}>{t.registerSubtitle}</p>
+        </div>
 
         {error && <div style={styles.error}>{error}</div>}
 
@@ -65,6 +65,17 @@ export default function Register() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={t.username}
+              style={styles.input}
+              required
+            />
+          </div>
+          <div style={styles.field}>
+            <label style={styles.label}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your.email@example.com"
               style={styles.input}
               required
             />
@@ -118,20 +129,24 @@ export default function Register() {
 }
 
 const styles = {
-  page: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "radial-gradient(ellipse at 60% 40%, rgba(201,168,76,0.04) 0%, transparent 60%)" },
-  box: { width: "100%", maxWidth: 420, background: "var(--bg2)", border: "1px solid var(--border2)", borderRadius: 16, padding: 36 },
-  logoStrip: { marginBottom: 28 },
-  title: { fontSize: 24, marginBottom: 8 },
-  sub: { color: "var(--text2)", fontSize: 14, marginBottom: 24 },
-  error: { background: "var(--red-dim)", border: "1px solid rgba(224,84,84,0.3)", color: "var(--red)", padding: "10px 14px", borderRadius: 8, fontSize: 13, marginBottom: 16 },
-  form: { display: "flex", flexDirection: "column", gap: 14 },
-  field: { display: "flex", flexDirection: "column", gap: 6 },
-  label: { fontSize: 13, color: "var(--text2)", fontWeight: 500 },
-  input: { width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border2)", background: "var(--bg3)", color: "var(--text)" },
-  passwordRow: { display: "flex", alignItems: "center" },
-  showPasswordBtn: { border: "1px solid var(--border2)", background: "var(--bg3)", color: "var(--gold)", padding: "8px 10px", borderRadius: 8, cursor: "pointer", fontSize: 12, whiteSpace: "nowrap" },
-  submitBtn: { width: "100%", padding: "12px", marginTop: 4 },
+  page: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "transparent" },
+  box: { width: "100%", maxWidth: 460, background: "#ffffff", borderRadius: 24, padding: 36, boxShadow: "0 24px 80px rgba(34,140,94,0.08)", border: "1px solid rgba(34,140,94,0.12)" },
+  headerBar: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 },
+  brandRow: { display: "flex", alignItems: "center", gap: 12 },
+  brandLabel: { fontSize: 16, fontWeight: 700, color: "var(--primary)", textTransform: "lowercase" },
+  headerLink: { color: "var(--text2)", textDecoration: "none", fontWeight: 600 },
+  bodyTop: { marginBottom: 20 },
+  title: { fontSize: 28, marginBottom: 8, color: "var(--text)" },
+  sub: { color: "var(--text2)", fontSize: 15, lineHeight: 1.7, marginBottom: 24 },
+  error: { background: "rgba(224,84,84,0.12)", border: "1px solid rgba(224,84,84,0.18)", color: "var(--red)", padding: "12px 14px", borderRadius: 14, fontSize: 13, marginBottom: 16 },
+  form: { display: "flex", flexDirection: "column", gap: 16 },
+  field: { display: "flex", flexDirection: "column", gap: 8 },
+  label: { fontSize: 13, color: "var(--text3)", fontWeight: 600 },
+  input: { width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid rgba(34,140,94,0.16)", background: "#fdfdfd", color: "var(--text)" },
+  passwordRow: { display: "flex", alignItems: "center", gap: 10 },
+  showPasswordBtn: { border: "1px solid rgba(34,140,94,0.16)", background: "#f6fbf7", color: "var(--primary)", padding: "10px 14px", borderRadius: 12, cursor: "pointer", fontSize: 13 },
+  submitBtn: { width: "100%", padding: "14px", marginTop: 4, borderRadius: 999 },
   footerText: { color: "var(--text3)", fontSize: 13, marginTop: 18, textAlign: "center" },
-  link: { color: "var(--gold)", textDecoration: "none" },
+  link: { color: "var(--primary)", textDecoration: "none", fontWeight: 700 },
 };
 
