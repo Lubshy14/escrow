@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { useLanguage } from "../context/LanguageContext";
+import { useAuth } from "../context/AuthContext.jsx";
+import { availableLanguages, useLanguage } from "../context/LanguageContext";
 import Logo from "../components/Logo";
 
 export default function Login() {
@@ -20,7 +20,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(username, password);
-      navigate("/verify");
+      navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.error || "Invalid credentials. Please try again.");
     } finally {
@@ -29,14 +29,14 @@ export default function Login() {
   };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.box}>
-          <header style={styles.headerBar}>
+    <div className="auth-page" style={styles.page}>
+      <div className="auth-box" style={styles.box}>
+          <header className="auth-header" style={styles.headerBar}>
           <div style={styles.brandRow}>
             <Logo size={28} showText={false} />
             <span style={styles.brandLabel}>ticket board</span>
           </div>
-          <Link to="/register" style={styles.headerLink}>新規登録</Link>
+          <Link to="/register" style={styles.headerLink}>{t.signUp}</Link>
         </header>
 
         <div style={styles.bodyTop}>
@@ -55,7 +55,7 @@ export default function Login() {
           </div>
           <div style={styles.field}>
             <label style={styles.label}>{t.password}</label>
-            <div style={styles.passwordRow}>
+            <div className="password-row" style={styles.passwordRow}>
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
@@ -77,15 +77,13 @@ export default function Login() {
           <div style={styles.field}>
             <label style={styles.label}>{t.language}</label>
             <select value={language} onChange={e => setLanguage(e.target.value)} style={styles.input}>
-              <option>English</option>
-              <option>Japanese</option>
-              <option>French</option>
-              <option>Spanish</option>
-              <option>Mandarin</option>
+              {availableLanguages.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
             </select>
           </div>
           <button type="submit" className="btn-primary" style={styles.submitBtn} disabled={loading}>
-            {loading ? `${t.signIn}…` : t.signIn}
+            {loading ? `${t.signIn}...` : t.signIn}
           </button>
         </form>
 
@@ -95,12 +93,6 @@ export default function Login() {
           </p>
           <p style={{ textAlign: "center", marginTop: 6 }}>
             <Link to="/register" style={styles.registerLink}>{t.signUp}</Link>
-          </p>
-          <p style={{ color: "var(--text3)", fontSize: 12, marginTop: 8, textAlign: "center" }}>
-            Demo: admin/admin123 · client1/client123 · client2/client123
-          </p>
-          <p style={{ color: "var(--text3)", fontSize: 12, marginTop: 6, textAlign: "center" }}>
-            Or use short links: <code style={{ color: "var(--gold)", background: "var(--gold-dim)", padding: "1px 6px", borderRadius: 4 }}>/l/al7x2</code> · <code style={{ color: "var(--gold)", background: "var(--gold-dim)", padding: "1px 6px", borderRadius: 4 }}>/l/bk9m4</code>
           </p>
         </div>
       </div>

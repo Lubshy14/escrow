@@ -1,7 +1,8 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { useLanguage } from "../context/LanguageContext";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
+import { availableLanguages, useLanguage } from "../context/LanguageContext";
 import Logo from "../components/Logo";
 
 export default function Register() {
@@ -12,17 +13,53 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [invite, setInvite] = useState(null);
+  const [inviteInput, setInviteInput] = useState("");
+  const [inviteNotice, setInviteNotice] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { code } = useParams();
+  const [searchParams] = useSearchParams();
+  const inviteCode = getInviteCode(inviteInput) || searchParams.get("invite") || code;
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadInvite = async () => {
+      setInvite(null);
+      setInviteNotice("");
+
+      if (!inviteCode) return;
+
+      try {
+        const { data } = await axios.get(`/api/invites/${inviteCode}`);
+        if (!ignore) {
+          setInvite(data.invite);
+          setInviteNotice("");
+        }
+      } catch (err) {
+        if (!ignore) {
+          setInvite(null);
+          setInviteNotice("Invite not found. You can still register without it.");
+        }
+      }
+    };
+
+    loadInvite();
+
+    return () => {
+      ignore = true;
+    };
+  }, [inviteCode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await register(name, username, password, email);
-      navigate("/verify");
+      await register(name, username, password, email, invite ? inviteCode : "");
+      navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.error || t.registerError);
     } finally {
@@ -31,9 +68,9 @@ export default function Register() {
   };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.box}>
-        <header style={styles.headerBar}>
+    <div className="auth-page" style={styles.page}>
+      <div className="auth-box" style={styles.box}>
+        <header className="auth-header" style={styles.headerBar}>
           <div style={styles.brandRow}>
             <Logo size={28} showText={false} />
             <span style={styles.brandLabel}>Ticketswap</span>
@@ -47,8 +84,23 @@ export default function Register() {
         </div>
 
         {error && <div style={styles.error}>{error}</div>}
+        {invite && (
+          <div style={styles.inviteBox}>
+            Invited by <strong>{invite.invitedByName}</strong>
+          </div>
+        )}
+        {inviteNotice && <div style={styles.inviteNotice}>{inviteNotice}</div>}
 
         <form onSubmit={handleSubmit} style={styles.form}>
+          <div style={styles.field}>
+            <label style={styles.label}>Invite link optional</label>
+            <input
+              value={inviteInput}
+              onChange={(e) => setInviteInput(e.target.value)}
+              placeholder="Paste invite link or leave blank"
+              style={styles.input}
+            />
+          </div>
           <div style={styles.field}>
             <label style={styles.label}>{t.name}</label>
             <input
@@ -82,7 +134,7 @@ export default function Register() {
           </div>
           <div style={styles.field}>
             <label style={styles.label}>{t.password}</label>
-            <div style={styles.passwordRow}>
+            <div className="password-row" style={styles.passwordRow}>
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
@@ -108,15 +160,13 @@ export default function Register() {
               onChange={(e) => setLanguage(e.target.value)}
               style={styles.input}
             >
-              <option>English</option>
-              <option>Japanese</option>
-              <option>French</option>
-              <option>Spanish</option>
-              <option>Mandarin</option>
+              {availableLanguages.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
             </select>
           </div>
           <button type="submit" className="btn-primary" style={styles.submitBtn} disabled={loading}>
-            {loading ? `${t.signUp}…` : t.signUp}
+            {loading ? `${t.signUp}...` : t.signUp}
           </button>
         </form>
 
@@ -126,6 +176,18 @@ export default function Register() {
       </div>
     </div>
   );
+}
+
+function getInviteCode(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  try {
+    const url = new URL(trimmed);
+    return url.searchParams.get("invite") || url.pathname.split("/").filter(Boolean).pop() || "";
+  } catch (error) {
+    return trimmed;
+  }
 }
 
 const styles = {
@@ -139,6 +201,8 @@ const styles = {
   title: { fontSize: 28, marginBottom: 8, color: "var(--text)" },
   sub: { color: "var(--text2)", fontSize: 15, lineHeight: 1.7, marginBottom: 24 },
   error: { background: "rgba(224,84,84,0.12)", border: "1px solid rgba(224,84,84,0.18)", color: "var(--red)", padding: "12px 14px", borderRadius: 14, fontSize: 13, marginBottom: 16 },
+  inviteBox: { background: "#e8f4ee", border: "1px solid rgba(31,122,82,0.12)", color: "#1f7a52", padding: "12px 14px", borderRadius: 14, fontSize: 13, marginBottom: 16 },
+  inviteNotice: { background: "#fff5d9", border: "1px solid rgba(138,91,0,0.16)", color: "#8a5b00", padding: "12px 14px", borderRadius: 14, fontSize: 13, marginBottom: 16 },
   form: { display: "flex", flexDirection: "column", gap: 16 },
   field: { display: "flex", flexDirection: "column", gap: 8 },
   label: { fontSize: 13, color: "var(--text3)", fontWeight: 600 },

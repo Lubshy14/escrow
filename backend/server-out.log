@@ -1,0 +1,3 @@
+Escrow backend listening on http://localhost:4000
+Database: in-memory fallback
+Image storage: in-memory/base64 fallback
